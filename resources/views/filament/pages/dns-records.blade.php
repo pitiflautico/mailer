@@ -6,12 +6,33 @@
 
         // Get DKIM public key if exists
         $dkimPublicKey = null;
-        if ($domain->dkim_public_key) {
-            // Extract p= value from DKIM public key
-            if (preg_match('/p=([A-Za-z0-9+\/=]+)/', $domain->dkim_public_key, $matches)) {
-                $dkimPublicKey = "v=DKIM1; k=rsa; p={$matches[1]}";
+        $dkimKeyExists = false;
+
+        // Check if DKIM keys exist (either public key or private key means it was generated)
+        if ($domain->dkim_public_key || $domain->dkim_private_key) {
+            $dkimKeyExists = true;
+
+            if ($domain->dkim_public_key) {
+                // Extract p= value from DKIM public key
+                if (preg_match('/p=([A-Za-z0-9+\/=]+)/', $domain->dkim_public_key, $matches)) {
+                    $dkimPublicKey = "v=DKIM1; k=rsa; p={$matches[1]}";
+                } else {
+                    $dkimPublicKey = $domain->dkim_public_key;
+                }
             } else {
-                $dkimPublicKey = $domain->dkim_public_key;
+                // Try to read from file system
+                $dkimPath = config('mailcore.dkim_path', '/etc/opendkim/keys');
+                $dnsFile = "{$dkimPath}/{$domain->name}/{$dkimSelector}.dns";
+
+                if (file_exists($dnsFile)) {
+                    $content = file_get_contents($dnsFile);
+                    // Extract the public key value
+                    if (preg_match('/\((.*?)\)/s', $content, $matches)) {
+                        // Clean up the key
+                        $key = str_replace(['"', ' ', "\t", "\n", "\r"], '', $matches[1]);
+                        $dkimPublicKey = "v=DKIM1; k=rsa; p={$key}";
+                    }
+                }
             }
         }
     @endphp
@@ -120,24 +141,51 @@
             @endif
         </h3>
         <div class="space-y-2">
-            @if($dkimPublicKey)
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <span class="font-medium text-gray-700 dark:text-gray-300">Type:</span>
-                        <code class="ml-2 px-2 py-1 bg-white dark:bg-gray-900 rounded">TXT</code>
+            @if($dkimKeyExists)
+                @if($dkimPublicKey)
+                    <!-- DKIM key found and can be displayed -->
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">Type:</span>
+                            <code class="ml-2 px-2 py-1 bg-white dark:bg-gray-900 rounded">TXT</code>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">Name:</span>
+                            <code class="ml-2 px-2 py-1 bg-white dark:bg-gray-900 rounded">{{ $dkimSelector }}._domainkey.{{ $domain->name }}</code>
+                        </div>
                     </div>
                     <div>
-                        <span class="font-medium text-gray-700 dark:text-gray-300">Name:</span>
-                        <code class="ml-2 px-2 py-1 bg-white dark:bg-gray-900 rounded">{{ $dkimSelector }}._domainkey.{{ $domain->name }}</code>
+                        <span class="font-medium text-gray-700 dark:text-gray-300">Value:</span>
+                        <div class="mt-1">
+                            <code class="block px-3 py-2 bg-white dark:bg-gray-900 rounded text-xs break-all">{{ $dkimPublicKey }}</code>
+                        </div>
                     </div>
-                </div>
-                <div>
-                    <span class="font-medium text-gray-700 dark:text-gray-300">Value:</span>
-                    <div class="mt-1">
-                        <code class="block px-3 py-2 bg-white dark:bg-gray-900 rounded text-xs break-all">{{ $dkimPublicKey }}</code>
+                @else
+                    <!-- DKIM key exists but couldn't be extracted -->
+                    <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded border border-blue-200 dark:border-blue-800">
+                        <p class="text-sm text-blue-800 dark:text-blue-200 mb-2">
+                            ✓ Las claves DKIM ya están generadas.
+                        </p>
+                        <p class="text-sm text-blue-700 dark:text-blue-300 mb-2">
+                            Para ver la clave pública y añadirla al DNS, ejecuta:
+                        </p>
+                        <code class="block px-3 py-2 bg-white dark:bg-gray-900 rounded text-xs">
+                            php artisan mailcore:show-dns {{ $domain->name }}
+                        </code>
                     </div>
-                </div>
+                    <div class="grid grid-cols-2 gap-4 text-sm mt-3">
+                        <div>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">Type:</span>
+                            <code class="ml-2 px-2 py-1 bg-white dark:bg-gray-900 rounded">TXT</code>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">Name:</span>
+                            <code class="ml-2 px-2 py-1 bg-white dark:bg-gray-900 rounded">{{ $dkimSelector }}._domainkey.{{ $domain->name }}</code>
+                        </div>
+                    </div>
+                @endif
             @else
+                <!-- DKIM key not generated yet -->
                 <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-800">
                     <p class="text-sm text-yellow-800 dark:text-yellow-200">
                         ⚠️ La clave DKIM aún no ha sido generada.
