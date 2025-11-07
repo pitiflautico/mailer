@@ -90,8 +90,23 @@ Para instrucciones detalladas, consulta [INSTALLATION.md](INSTALLATION.md).
 
 ---
 
+## 🧪 Testing Local
+
+¿Quieres probar el proyecto en local sin servidor de correo?
+
+```bash
+# Setup automático
+bash setup-local.sh
+```
+
+Más opciones en [QUICKSTART.md](QUICKSTART.md) y [TESTING.md](TESTING.md).
+
+---
+
 ## 📖 Documentación
 
+- [⚡ QuickStart Local](QUICKSTART.md) - Inicio rápido en 5 minutos
+- [🧪 Guía de Testing](TESTING.md) - Testing completo local y Docker
 - [📘 Guía de Instalación](INSTALLATION.md) - Instalación completa paso a paso
 - [🔌 Documentación de API](API.md) - Endpoints y ejemplos de uso
 - [⚙️ Configuración DNS](INSTALLATION.md#-configuración-dns) - Registros DNS requeridos
