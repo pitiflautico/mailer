@@ -14,13 +14,22 @@ class CreateDomain extends CreateRecord
     protected function afterCreate(): void
     {
         // Auto-generate DKIM keys for new domain
-        app(DkimService::class)->generateKeys($this->record);
+        try {
+            app(DkimService::class)->generateKeys($this->record);
 
-        Notification::make()
-            ->success()
-            ->title('Dominio creado')
-            ->body('Las claves DKIM han sido generadas automáticamente. Por favor, configure sus registros DNS.')
-            ->send();
+            Notification::make()
+                ->success()
+                ->title('Dominio creado')
+                ->body('Las claves DKIM han sido generadas automáticamente. Por favor, configure sus registros DNS.')
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->warning()
+                ->title('Dominio creado con advertencias')
+                ->body('El dominio fue creado pero no se pudieron generar las claves DKIM automáticamente: ' . $e->getMessage() . '. Puedes usar el botón "Generar DKIM" en la tabla de dominios.')
+                ->persistent()
+                ->send();
+        }
     }
 
     protected function getRedirectUrl(): string

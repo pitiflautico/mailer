@@ -169,13 +169,22 @@ class DomainResource extends Resource
                     ->color('warning')
                     ->requiresConfirmation()
                     ->action(function (Domain $record) {
-                        app(DkimService::class)->generateKeys($record);
+                        try {
+                            app(DkimService::class)->generateKeys($record);
 
-                        Notification::make()
-                            ->success()
-                            ->title('Claves DKIM generadas')
-                            ->body('Las claves DKIM han sido generadas exitosamente.')
-                            ->send();
+                            Notification::make()
+                                ->success()
+                                ->title('Claves DKIM generadas')
+                                ->body('Las claves DKIM han sido generadas exitosamente.')
+                                ->send();
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->danger()
+                                ->title('Error al generar claves DKIM')
+                                ->body('No se pudieron generar las claves DKIM: ' . $e->getMessage())
+                                ->persistent()
+                                ->send();
+                        }
                     })
                     ->visible(fn (Domain $record) => !$record->dkim_public_key),
 

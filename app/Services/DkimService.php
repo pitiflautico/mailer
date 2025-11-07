@@ -18,9 +18,18 @@ class DkimService
             $domainPath = "{$dkimPath}/{$domain->name}";
             $selector = $domain->dkim_selector;
 
-            // Create directory if it doesn't exist
+            // Create DKIM base directory if it doesn't exist
+            if (!is_dir($dkimPath)) {
+                if (!mkdir($dkimPath, 0755, true)) {
+                    throw new \Exception("No se pudo crear el directorio DKIM: {$dkimPath}. Verifica los permisos.");
+                }
+            }
+
+            // Create domain directory if it doesn't exist
             if (!is_dir($domainPath)) {
-                mkdir($domainPath, 0755, true);
+                if (!mkdir($domainPath, 0755, true)) {
+                    throw new \Exception("No se pudo crear el directorio del dominio: {$domainPath}. Verifica los permisos.");
+                }
             }
 
             // Generate DKIM keys using openssl
@@ -28,16 +37,36 @@ class DkimService
             $publicKeyPath = "{$domainPath}/{$selector}.txt";
 
             // Generate private key
-            $privateKeyCommand = "openssl genrsa -out {$privateKeyPath} 2048";
-            Process::run($privateKeyCommand);
+            $privateKeyCommand = "openssl genrsa -out {$privateKeyPath} 2048 2>&1";
+            $result = Process::run($privateKeyCommand);
+
+            if (!$result->successful()) {
+                throw new \Exception("Error al generar la clave privada DKIM: " . $result->errorOutput());
+            }
+
+            if (!file_exists($privateKeyPath)) {
+                throw new \Exception("La clave privada no se generó correctamente en: {$privateKeyPath}");
+            }
 
             // Generate public key
-            $publicKeyCommand = "openssl rsa -in {$privateKeyPath} -pubout -outform PEM -out {$publicKeyPath}";
-            Process::run($publicKeyCommand);
+            $publicKeyCommand = "openssl rsa -in {$privateKeyPath} -pubout -outform PEM -out {$publicKeyPath} 2>&1";
+            $result = Process::run($publicKeyCommand);
+
+            if (!$result->successful()) {
+                throw new \Exception("Error al generar la clave pública DKIM: " . $result->errorOutput());
+            }
+
+            if (!file_exists($publicKeyPath)) {
+                throw new \Exception("La clave pública no se generó correctamente en: {$publicKeyPath}");
+            }
 
             // Read keys
             $privateKey = file_get_contents($privateKeyPath);
             $publicKey = file_get_contents($publicKeyPath);
+
+            if (empty($privateKey) || empty($publicKey)) {
+                throw new \Exception("Las claves generadas están vacías");
+            }
 
             // Format public key for DNS
             $publicKeyDns = $this->formatPublicKeyForDns($publicKey);
@@ -50,8 +79,12 @@ class DkimService
 
             return true;
         } catch (\Exception $e) {
-            \Log::error('DKIM key generation failed: ' . $e->getMessage());
-            return false;
+            \Log::error('DKIM key generation failed: ' . $e->getMessage(), [
+                'domain' => $domain->name,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e; // Re-throw to let the caller handle it
         }
     }
 
