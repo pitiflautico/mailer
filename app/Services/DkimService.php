@@ -77,6 +77,9 @@ class DkimService
                 'dkim_public_key' => $publicKeyDns,
             ]);
 
+            // Update OpenDKIM configuration files
+            $this->updateOpenDkimConfig($domain, $selector, $privateKeyPath);
+
             return true;
         } catch (\Exception $e) {
             \Log::error('DKIM key generation failed: ' . $e->getMessage(), [
@@ -264,5 +267,97 @@ class DkimService
                 'value' => "v=DMARC1; p=none; rua=mailto:dmarc@{$domain->name}",
             ],
         ];
+    }
+
+    /**
+     * Update OpenDKIM configuration files automatically
+     */
+    protected function updateOpenDkimConfig(Domain $domain, string $selector, string $privateKeyPath): void
+    {
+        try {
+            $domainName = $domain->name;
+
+            // Key identifier for OpenDKIM
+            $keyId = "{$selector}._domainkey.{$domainName}";
+
+            // 1. Update KeyTable
+            $keyTablePath = '/etc/opendkim/KeyTable';
+            $keyTableEntry = "{$keyId} {$domainName}:{$selector}:{$privateKeyPath}\n";
+
+            if (is_writable($keyTablePath) || !file_exists($keyTablePath)) {
+                // Read existing content
+                $existingContent = file_exists($keyTablePath) ? file_get_contents($keyTablePath) : '';
+
+                // Remove old entry for this domain if exists
+                $lines = explode("\n", $existingContent);
+                $lines = array_filter($lines, function($line) use ($domainName, $selector) {
+                    return !str_contains($line, "{$selector}._domainkey.{$domainName}");
+                });
+
+                // Add new entry
+                $lines[] = rtrim($keyTableEntry);
+                file_put_contents($keyTablePath, implode("\n", $lines) . "\n");
+
+                \Log::info("Updated OpenDKIM KeyTable for {$domainName}");
+            }
+
+            // 2. Update SigningTable
+            $signingTablePath = '/etc/opendkim/SigningTable';
+            $signingTableEntry = "*@{$domainName} {$keyId}\n";
+
+            if (is_writable($signingTablePath) || !file_exists($signingTablePath)) {
+                // Read existing content
+                $existingContent = file_exists($signingTablePath) ? file_get_contents($signingTablePath) : '';
+
+                // Remove old entry for this domain if exists
+                $lines = explode("\n", $existingContent);
+                $lines = array_filter($lines, function($line) use ($domainName) {
+                    return !str_contains($line, "@{$domainName}");
+                });
+
+                // Add new entry
+                $lines[] = rtrim($signingTableEntry);
+                file_put_contents($signingTablePath, implode("\n", $lines) . "\n");
+
+                \Log::info("Updated OpenDKIM SigningTable for {$domainName}");
+            }
+
+            // 3. Update TrustedHosts
+            $trustedHostsPath = '/etc/opendkim/TrustedHosts';
+            $trustedHostEntry = "{$domainName}\n";
+
+            if (is_writable($trustedHostsPath) || !file_exists($trustedHostsPath)) {
+                // Read existing content
+                $existingContent = file_exists($trustedHostsPath) ? file_get_contents($trustedHostsPath) : "127.0.0.1\nlocalhost\n";
+
+                // Add domain if not exists
+                if (!str_contains($existingContent, $domainName)) {
+                    file_put_contents($trustedHostsPath, $existingContent . $trustedHostEntry);
+                    \Log::info("Updated OpenDKIM TrustedHosts for {$domainName}");
+                }
+            }
+
+            // 4. Set proper permissions
+            if (file_exists($privateKeyPath)) {
+                chmod($privateKeyPath, 0600);
+                // Try to set owner to opendkim user
+                @chown($privateKeyPath, 'opendkim');
+                @chgrp($privateKeyPath, 'opendkim');
+            }
+
+            // 5. Reload OpenDKIM service
+            $reloadResult = Process::run('systemctl reload opendkim 2>&1 || service opendkim reload 2>&1');
+
+            if ($reloadResult->successful()) {
+                \Log::info("OpenDKIM reloaded successfully for {$domainName}");
+            } else {
+                \Log::warning("Could not reload OpenDKIM automatically. Run: sudo systemctl reload opendkim");
+            }
+
+        } catch (\Exception $e) {
+            // Don't fail the whole operation if OpenDKIM config update fails
+            \Log::warning("Could not update OpenDKIM config automatically: " . $e->getMessage());
+            \Log::warning("You may need to run: sudo ./scripts/manage-dkim.sh configure {$domain->name}");
+        }
     }
 }

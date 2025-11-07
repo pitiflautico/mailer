@@ -141,6 +141,34 @@ class MailService
                 'metadata' => $data['metadata'] ?? [],
             ]);
 
+            // Variables to capture SMTP response
+            $smtpResponse = null;
+            $smtpCode = null;
+
+            // Listen for mail sent event to capture SMTP response
+            \Illuminate\Support\Facades\Event::listen(
+                \Illuminate\Mail\Events\MessageSent::class,
+                function ($event) use (&$smtpResponse, &$smtpCode, $sendLog) {
+                    try {
+                        // Try to get SMTP response from Symfony transport
+                        $sentMessage = $event->sent;
+
+                        if ($sentMessage && method_exists($sentMessage, 'getDebug')) {
+                            $debug = $sentMessage->getDebug();
+                            if (!empty($debug)) {
+                                $smtpResponse = $debug;
+                                // Extract SMTP code from response (usually starts with 250)
+                                if (preg_match('/^(\d{3})/', $debug, $matches)) {
+                                    $smtpCode = (int) $matches[1];
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Log::debug("Could not capture SMTP response: " . $e->getMessage());
+                    }
+                }
+            );
+
             // Send email with compliance headers
             Mail::raw($body, function ($message) use ($data, $unsubscribeUrl, $unsubscribeOneClick, $to) {
                 $message->from($data['from'])
@@ -166,11 +194,21 @@ class MailService
                 }
             });
 
-            // Update send log
-            $sendLog->update([
+            // Update send log with SMTP response
+            $updateData = [
                 'status' => 'sent',
                 'sent_at' => now(),
-            ]);
+            ];
+
+            // Add SMTP response if captured
+            if ($smtpCode) {
+                $updateData['smtp_code'] = $smtpCode;
+            }
+            if ($smtpResponse) {
+                $updateData['smtp_response'] = substr($smtpResponse, 0, 500); // Limit length
+            }
+
+            $sendLog->update($updateData);
 
             // Increment mailbox send count
             $mailbox->incrementSendCount();
