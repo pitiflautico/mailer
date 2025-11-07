@@ -36,7 +36,7 @@ class SendTestEmail extends Page implements HasForms
         $this->form->fill([
             'to' => '',
             'subject' => 'Correo de prueba desde MailCore',
-            'body' => "Este es un correo de prueba para verificar la configuración de SPF, DKIM y DMARC.\n\nSi recibes este correo, tu servidor está funcionando correctamente.",
+            'body' => "Este es un correo de prueba para verificar la configuración de SPF, DKIM y DMARC.\n\nSi recibes este correo, tu servidor está funcionando correctamente.\n\n---\n\nEste es un correo transaccional de prueba.\n\nCompany Name\n123 Main Street\nCity, State 12345\nCountry",
         ]);
     }
 

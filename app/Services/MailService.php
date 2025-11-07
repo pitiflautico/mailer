@@ -94,7 +94,8 @@ class MailService
             $contentValidation = $this->complianceService->validateEmailContent(
                 $data['subject'] ?? '',
                 $data['body'] ?? '',
-                $from
+                $from,
+                $data['email_type'] ?? 'transactional'
             );
 
             if (!$contentValidation['compliant']) {

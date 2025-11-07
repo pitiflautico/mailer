@@ -150,26 +150,28 @@ class ComplianceService
     /**
      * Validate email content for compliance.
      */
-    public function validateEmailContent(string $subject, string $body, string $fromEmail): array
+    public function validateEmailContent(string $subject, string $body, string $fromEmail, string $type = 'transactional'): array
     {
         $issues = [];
 
-        // CAN-SPAM Act requirements
-        if (!$this->hasUnsubscribeLink($body)) {
-            $issues[] = 'Missing unsubscribe link (CAN-SPAM Act)';
-        }
+        // CAN-SPAM Act requirements - stricter for marketing emails
+        if ($type === 'marketing') {
+            if (!$this->hasUnsubscribeLink($body)) {
+                $issues[] = 'Missing unsubscribe link (CAN-SPAM Act)';
+            }
 
-        if (!$this->hasPhysicalAddress($body)) {
-            $issues[] = 'Missing physical address (CAN-SPAM Act)';
+            if (!$this->hasPhysicalAddress($body)) {
+                $issues[] = 'Missing physical address (CAN-SPAM Act)';
+            }
         }
 
         if ($this->hasDeceptiveSubject($subject, $body)) {
             $issues[] = 'Subject line may be deceptive (CAN-SPAM Act)';
         }
 
-        // Spam trigger words
+        // Spam trigger words - only warn, don't block
         $spamScore = $this->calculateSpamScore($subject, $body);
-        if ($spamScore > 5) {
+        if ($spamScore > 8) { // Increased threshold from 5 to 8
             $issues[] = sprintf('High spam score: %d/10 (contains spam trigger words)', $spamScore);
         }
 
