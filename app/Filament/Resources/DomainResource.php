@@ -154,6 +154,15 @@ class DomainResource extends Resource
                         ->where('dmarc_verified', true)),
             ])
             ->actions([
+                Tables\Actions\Action::make('show_dns')
+                    ->label('Ver Registros DNS')
+                    ->icon('heroicon-o-document-text')
+                    ->color('info')
+                    ->modalHeading(fn (Domain $record) => 'Registros DNS para ' . $record->name)
+                    ->modalContent(fn (Domain $record) => view('filament.pages.dns-records', ['domain' => $record]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Cerrar'),
+
                 Tables\Actions\Action::make('generate_dkim')
                     ->label('Generar DKIM')
                     ->icon('heroicon-o-key')
@@ -175,12 +184,20 @@ class DomainResource extends Resource
                     ->icon('heroicon-o-shield-check')
                     ->color('success')
                     ->action(function (Domain $record) {
-                        app(DkimService::class)->verifyDnsRecords($record);
+                        // Run verification
+                        \Artisan::call('mailcore:verify-dns', ['domain' => $record->name]);
+
+                        // Refresh record
+                        $record->refresh();
+
+                        $allVerified = $record->isFullyVerified();
 
                         Notification::make()
-                            ->success()
-                            ->title('Verificación completada')
-                            ->body('Los registros DNS han sido verificados.')
+                            ->title($allVerified ? 'Verificación Exitosa' : 'Verificación Parcial')
+                            ->body($allVerified
+                                ? 'Todos los registros DNS están verificados correctamente.'
+                                : 'Algunos registros DNS no están configurados. Haz clic en "Ver Registros DNS" para ver la configuración necesaria.')
+                            ->status($allVerified ? 'success' : 'warning')
                             ->send();
                     }),
 
