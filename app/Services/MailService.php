@@ -111,9 +111,6 @@ class MailService
                 return $this->sendSandbox($data, $mailbox);
             }
 
-            // Generate message ID
-            $messageId = $this->generateMessageId($mailbox->domain);
-
             // 📧 Add unsubscribe link and headers
             $unsubscribeUrl = Unsubscribe::generateUrl($to, $mailbox->domain_id);
             $unsubscribeOneClick = route('unsubscribe.one-click', ['token' => Str::random(64)]);
@@ -123,6 +120,9 @@ class MailService
             if (!str_contains($body, 'unsubscribe')) {
                 $body .= "\n\n---\nTo unsubscribe from future emails, click here: {$unsubscribeUrl}";
             }
+
+            // Generate a simple message ID for tracking
+            $messageId = Str::random(32) . '@' . $mailbox->domain->name;
 
             // Create send log
             $sendLog = SendLog::create([
@@ -142,13 +142,14 @@ class MailService
             ]);
 
             // Send email with compliance headers
-            Mail::raw($body, function ($message) use ($data, $messageId, $unsubscribeUrl, $unsubscribeOneClick, $to) {
+            Mail::raw($body, function ($message) use ($data, $unsubscribeUrl, $unsubscribeOneClick, $to) {
                 $message->from($data['from'])
                     ->to($to)
-                    ->subject($data['subject'] ?? 'No Subject')
-                    ->getHeaders()
-                    ->addTextHeader('Message-ID', $messageId)
-                    ->addTextHeader('List-Unsubscribe', "<{$unsubscribeUrl}>, <{$unsubscribeOneClick}>")
+                    ->subject($data['subject'] ?? 'No Subject');
+
+                // Add headers
+                $headers = $message->getHeaders();
+                $headers->addTextHeader('List-Unsubscribe', "<{$unsubscribeUrl}>, <{$unsubscribeOneClick}>")
                     ->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click')
                     ->addTextHeader('Precedence', 'bulk');
 
