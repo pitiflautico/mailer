@@ -21,16 +21,17 @@ class ComplianceService
             'reasons' => [],
         ];
 
-        // 1. Check suppression list
+        // 1. Check suppression list (always check)
         if (SuppressionList::isSuppressed($toEmail)) {
             $checks['can_send'] = false;
             $checks['reasons'][] = 'Email is in suppression list';
         }
 
-        // 2. Check unsubscribe list
-        if (Unsubscribe::isUnsubscribed($toEmail)) {
+        // 2. Check unsubscribe list (only for marketing emails)
+        // Transactional emails can be sent even if user unsubscribed from marketing
+        if ($type === 'marketing' && Unsubscribe::isUnsubscribed($toEmail)) {
             $checks['can_send'] = false;
-            $checks['reasons'][] = 'User has unsubscribed';
+            $checks['reasons'][] = 'User has unsubscribed from marketing emails';
         }
 
         // 3. Check consent (for marketing emails)
