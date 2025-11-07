@@ -184,21 +184,30 @@ class DomainResource extends Resource
                     ->icon('heroicon-o-shield-check')
                     ->color('success')
                     ->action(function (Domain $record) {
-                        // Run verification
-                        \Artisan::call('mailcore:verify-dns', ['domain' => $record->name]);
+                        try {
+                            // Run verification directly using the service
+                            $dkimService = app(DkimService::class);
+                            $results = $dkimService->verifyDnsRecords($record);
 
-                        // Refresh record
-                        $record->refresh();
+                            // Refresh record to get updated values
+                            $record->refresh();
 
-                        $allVerified = $record->isFullyVerified();
+                            $allVerified = $record->isFullyVerified();
 
-                        Notification::make()
-                            ->title($allVerified ? 'Verificación Exitosa' : 'Verificación Parcial')
-                            ->body($allVerified
-                                ? 'Todos los registros DNS están verificados correctamente.'
-                                : 'Algunos registros DNS no están configurados. Haz clic en "Ver Registros DNS" para ver la configuración necesaria.')
-                            ->status($allVerified ? 'success' : 'warning')
-                            ->send();
+                            Notification::make()
+                                ->title($allVerified ? 'Verificación Exitosa' : 'Verificación Parcial')
+                                ->body($allVerified
+                                    ? 'Todos los registros DNS están verificados correctamente.'
+                                    : 'Algunos registros DNS no están configurados. Haz clic en "Ver Registros DNS" para ver la configuración necesaria.')
+                                ->status($allVerified ? 'success' : 'warning')
+                                ->send();
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->danger()
+                                ->title('Error en la verificación')
+                                ->body('Ocurrió un error al verificar los registros DNS: ' . $e->getMessage())
+                                ->send();
+                        }
                     }),
 
                 Tables\Actions\EditAction::make(),
