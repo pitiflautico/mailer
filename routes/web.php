@@ -3,10 +3,14 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UnsubscribeController;
 use App\Http\Controllers\ConsentController;
+use App\Http\Controllers\HealthCheckController;
 
 Route::get('/', function () {
     return redirect('/admin');
 });
+
+// Health Check (public)
+Route::get('/status', [HealthCheckController::class, 'index'])->name('status');
 
 // Unsubscribe routes (public)
 Route::prefix('unsubscribe')->name('unsubscribe.')->group(function () {

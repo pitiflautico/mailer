@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\SendMailController;
 use App\Http\Controllers\ComplianceController;
+use App\Http\Controllers\HealthCheckController;
 use App\Http\Middleware\AntiSpamMiddleware;
 use Illuminate\Support\Facades\Route;
 
@@ -17,10 +18,5 @@ Route::middleware(['auth:sanctum', AntiSpamMiddleware::class])->group(function (
     });
 });
 
-// Health check endpoint
-Route::get('/health', function () {
-    return response()->json([
-        'status' => 'ok',
-        'timestamp' => now()->toIso8601String(),
-    ]);
-})->name('api.health');
+// Health check endpoint (public)
+Route::get('/health', [HealthCheckController::class, 'api'])->name('api.health');
