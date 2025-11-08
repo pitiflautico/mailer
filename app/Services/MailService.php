@@ -173,6 +173,7 @@ class MailService
             Mail::raw($body, function ($message) use ($data, $unsubscribeUrl, $unsubscribeOneClick, $to) {
                 $message->from($data['from'])
                     ->to($to)
+                    ->returnPath($data['from'])  // Set envelope sender for DMARC alignment
                     ->subject($data['subject'] ?? 'No Subject');
 
                 // Add headers
