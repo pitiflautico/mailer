@@ -1,50 +1,45 @@
 <x-filament-panels::page>
     @if ($newTokenValue)
-        <x-filament::section>
-            <x-slot name="heading">
-                Token creado exitosamente
-            </x-slot>
+        <div class="mb-6">
+            <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <p class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                    ⚠️ Importante: Copia este token ahora
+                </p>
+                <p class="text-sm text-yellow-700 dark:text-yellow-300 mb-4">
+                    Por razones de seguridad, no podrás ver este token de nuevo. Guárdalo en un lugar seguro.
+                </p>
 
-            <div class="space-y-4">
-                <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                    <p class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                        ⚠️ Importante: Copia este token ahora
-                    </p>
-                    <p class="text-sm text-yellow-700 dark:text-yellow-300">
-                        Por razones de seguridad, no podrás ver este token de nuevo. Guárdalo en un lugar seguro.
-                    </p>
-                </div>
-
-                <div class="space-y-2">
+                <div class="mb-2">
                     <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Tu token de API:
                     </label>
-                    <div class="flex gap-2">
-                        <input
-                            type="text"
-                            value="{{ $newTokenValue }}"
-                            readonly
-                            id="api-token-value"
-                            class="flex-1 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-primary-500 dark:focus:border-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 rounded-lg shadow-sm"
-                        />
-                        <x-filament::button
-                            color="gray"
-                            onclick="copyToken()"
-                        >
-                            Copiar
-                        </x-filament::button>
-                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <input
+                        type="text"
+                        value="{{ $newTokenValue }}"
+                        readonly
+                        id="api-token-value"
+                        class="flex-1 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-primary-500 dark:focus:border-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 rounded-lg shadow-sm"
+                    />
+                    <button
+                        type="button"
+                        onclick="copyToken()"
+                        class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg"
+                    >
+                        Copiar
+                    </button>
                 </div>
 
-                <x-filament::button
+                <button
+                    type="button"
                     wire:click="clearNewToken"
-                    color="gray"
-                    size="sm"
+                    class="mt-4 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm"
                 >
                     Entendido, he copiado el token
-                </x-filament::button>
+                </button>
             </div>
-        </x-filament::section>
+        </div>
 
         <script>
             function copyToken() {
@@ -52,41 +47,38 @@
                 tokenInput.select();
                 tokenInput.setSelectionRange(0, 99999);
                 navigator.clipboard.writeText(tokenInput.value);
+                alert('Token copiado al portapapeles');
             }
         </script>
     @endif
 
-    <x-filament::section>
-        <x-slot name="heading">
-            Crear nuevo token
-        </x-slot>
+    <div class="mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Crear nuevo token</h3>
 
-        <form wire:submit="createToken" class="space-y-4">
+        <form wire:submit.prevent="createToken" class="space-y-4">
             <div>
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
                     Nombre del token
                 </label>
                 <input
                     type="text"
                     wire:model="tokenName"
                     placeholder="Ej: Mi proyecto Laravel"
-                    class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-primary-500 dark:focus:border-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 rounded-lg shadow-sm"
+                    class="block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-primary-500 dark:focus:border-primary-600 focus:ring-primary-500 dark:focus:ring-primary-600 rounded-lg shadow-sm"
                 />
-                @error('tokenName')
-                    <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                @enderror
             </div>
 
-            <x-filament::button type="submit">
+            <button
+                type="submit"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+            >
                 Crear token
-            </x-filament::button>
+            </button>
         </form>
-    </x-filament::section>
+    </div>
 
-    <x-filament::section>
-        <x-slot name="heading">
-            Tus tokens
-        </x-slot>
+    <div class="mb-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Tus tokens</h3>
 
         <div class="space-y-3">
             @forelse ($this->getTokens() as $token)
@@ -113,14 +105,14 @@
                             </p>
                         </div>
                     </div>
-                    <x-filament::button
-                        color="danger"
-                        size="sm"
+                    <button
+                        type="button"
                         wire:click="deleteToken({{ $token->id }})"
-                        wire:confirm="¿Estás seguro? Las aplicaciones que usen este token dejarán de funcionar."
+                        onclick="return confirm('¿Estás seguro? Las aplicaciones que usen este token dejarán de funcionar.')"
+                        class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-sm"
                     >
                         Eliminar
-                    </x-filament::button>
+                    </button>
                 </div>
             @empty
                 <div class="text-center py-8">
@@ -130,12 +122,10 @@
                 </div>
             @endforelse
         </div>
-    </x-filament::section>
+    </div>
 
-    <x-filament::section>
-        <x-slot name="heading">
-            Cómo usar tu token
-        </x-slot>
+    <div class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Cómo usar tu token</h3>
 
         <div class="space-y-4">
             <p class="text-sm text-gray-600 dark:text-gray-400">
@@ -152,5 +142,5 @@
     "body": "Contenido del email"
   }'</code></pre>
         </div>
-    </x-filament::section>
+    </div>
 </x-filament-panels::page>
