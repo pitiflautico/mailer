@@ -26,6 +26,7 @@ class SendMailController extends Controller
             'to' => 'required|email',
             'subject' => 'required|string|max:255',
             'body' => 'required|string',
+            'is_html' => 'nullable|boolean',
             'cc' => 'nullable|email',
             'bcc' => 'nullable|email',
             'reply_to' => 'nullable|email',
@@ -70,6 +71,7 @@ class SendMailController extends Controller
             'emails.*.to' => 'required|email',
             'emails.*.subject' => 'required|string|max:255',
             'emails.*.body' => 'required|string',
+            'emails.*.is_html' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {

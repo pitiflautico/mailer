@@ -141,8 +141,12 @@ class MailService
                 'metadata' => $data['metadata'] ?? [],
             ]);
 
+            // Detect if body is HTML or plain text
+            $isHtml = $data['is_html'] ?? $this->isHtmlContent($body);
+
             // Send email with compliance headers
-            Mail::raw($body, function ($message) use ($data, $unsubscribeUrl, $unsubscribeOneClick, $to) {
+            $sendMethod = $isHtml ? 'html' : 'raw';
+            Mail::$sendMethod($body, function ($message) use ($data, $unsubscribeUrl, $unsubscribeOneClick, $to) {
                 $message->from($data['from'])
                     ->to($to)
                     ->subject($data['subject'] ?? 'No Subject');
@@ -234,6 +238,15 @@ class MailService
     protected function generateMessageId(Domain $domain): string
     {
         return Str::random(32) . '@' . $domain->name;
+    }
+
+    /**
+     * Detect if content is HTML.
+     */
+    protected function isHtmlContent(string $content): bool
+    {
+        // Check if content contains HTML tags
+        return preg_match('/<\s*([a-z][a-z0-9]*)\b[^>]*>/i', $content) === 1;
     }
 
     /**
