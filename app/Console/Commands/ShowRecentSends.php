@@ -16,7 +16,7 @@ class ShowRecentSends extends Command
 
         $logs = SendLog::orderBy('created_at', 'desc')
             ->limit($limit)
-            ->get(['id', 'recipient', 'subject', 'status', 'created_at']);
+            ->get(['id', 'to_email', 'subject', 'status', 'created_at']);
 
         if ($logs->isEmpty()) {
             $this->info('No sends found.');
@@ -24,10 +24,10 @@ class ShowRecentSends extends Command
         }
 
         $this->table(
-            ['ID', 'Recipient', 'Subject', 'Status', 'Created At'],
+            ['ID', 'To', 'Subject', 'Status', 'Created At'],
             $logs->map(fn($log) => [
                 $log->id,
-                $log->recipient,
+                $log->to_email,
                 $log->subject ?? '(no subject)',
                 $log->status,
                 $log->created_at->format('Y-m-d H:i:s'),
