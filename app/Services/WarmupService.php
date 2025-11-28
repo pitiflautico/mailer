@@ -69,16 +69,21 @@ class WarmupService
      */
     protected function sendWarmupEmail(Mailbox $mailbox): void
     {
-        // Internal warmup email destinations (configurable)
-        $warmupRecipients = config('mailcore.warmup.recipients', [
-            'warmup@mail-tester.com',
-            // Add more warmup service emails here
-        ]);
+        // Get warmup recipients from config file
+        $warmupRecipients = require base_path('config/warmup-recipients.php');
 
         $recipient = $warmupRecipients[array_rand($warmupRecipients)];
 
-        $subject = $this->generateWarmupSubject();
-        $body = $this->generateWarmupBody();
+        // Use engaging templates for real Gmail addresses
+        $isRealEmail = str_contains($recipient, '@gmail.com');
+
+        if ($isRealEmail) {
+            $subject = $this->generateEngagingSubject();
+            $body = $this->generateEngagingBody($mailbox);
+        } else {
+            $subject = $this->generateWarmupSubject();
+            $body = $this->generateWarmupBody();
+        }
 
         Mail::html($body, function ($message) use ($mailbox, $recipient, $subject) {
             $message->from($mailbox->email)
@@ -115,6 +120,38 @@ class WarmupService
             '<p>Hi there,</p><p>Just wanted to send a quick update about your account.</p><p>Thanks,<br>The Team</p>',
             '<p>Hello,</p><p>This is a friendly reminder about your recent activity.</p><p>Best regards</p>',
             '<p>Hi,</p><p>We wanted to share some information with you.</p><p>Cheers</p>',
+        ];
+
+        return $templates[array_rand($templates)];
+    }
+
+    /**
+     * Generate engaging subject for real contacts.
+     */
+    protected function generateEngagingSubject(): string
+    {
+        $subjects = [
+            'Ayúdame con el warmup de GlooPlay 🎮',
+            'Favor rápido - Sistema de correo GlooPlay',
+            'Test de correo GlooPlay - necesito tu ayuda',
+            'Probando nuevo correo para GlooPlay',
+            'GlooPlay - Warmup del sistema de correo',
+        ];
+
+        return $subjects[array_rand($subjects)];
+    }
+
+    /**
+     * Generate engaging body asking for interaction.
+     */
+    protected function generateEngagingBody(Mailbox $mailbox): string
+    {
+        $templates = [
+            '<p>Hola!</p><p>Estoy configurando el sistema de correo de GlooPlay y necesito tu ayuda.</p><p><strong>¿Me ayudas con esto?</strong></p><ol><li>Si llegó a spam → marca como "No es spam"</li><li>Muévelo a inbox</li><li>Responde con "ok" o "👍"</li><li>Agrega ' . $mailbox->email . ' a contactos</li></ol><p>¡Gracias! Esto ayuda a que Gmail confíe en el dominio.</p>',
+
+            '<p>Hey!</p><p>Necesito un favor rápido para el sistema de correo de GlooPlay.</p><p><strong>Solo necesitas:</strong></p><ul><li>📥 Marcar "No es spam" si está en spam</li><li>📨 Moverlo a bandeja principal</li><li>💬 Responder con cualquier cosa</li><li>📇 Agregar ' . $mailbox->email . ' a contactos</li></ul><p>¡Mil gracias! 🙌</p>',
+
+            '<p>Hola!</p><p>Estoy montando el correo de GlooPlay y te necesito.</p><p><strong>Ayúdame así:</strong></p><ol><li>Si está en spam → "No es spam"</li><li>Mueve a inbox</li><li>Responde (aunque sea "vale")</li><li>Agrega ' . $mailbox->email . ' a contactos</li></ol><p>Gracias! Estás ayudando a que GlooPlay tenga un sistema profesional 🚀</p>',
         ];
 
         return $templates[array_rand($templates)];
