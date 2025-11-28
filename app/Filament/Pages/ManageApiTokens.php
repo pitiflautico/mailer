@@ -3,20 +3,15 @@
 namespace App\Filament\Pages;
 
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Concerns\InteractsWithTable;
-use Filament\Tables\Contracts\HasTable;
-use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
 
-class ManageApiTokens extends Page implements HasTable
+class ManageApiTokens extends Page implements HasForms
 {
-    use InteractsWithTable;
+    use InteractsWithForms;
 
     protected static ?string $navigationIcon = 'heroicon-o-key';
 
@@ -29,98 +24,41 @@ class ManageApiTokens extends Page implements HasTable
     protected static ?int $navigationSort = 99;
 
     public ?string $newTokenValue = null;
+    public ?string $tokenName = null;
 
-    public function table(Table $table): Table
+    public function getTokens()
     {
-        return $table
-            ->query(
-                Auth::user()->tokens()->getQuery()
-            )
-            ->columns([
-                TextColumn::make('name')
-                    ->label('Nombre')
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('token')
-                    ->label('Token')
-                    ->formatStateUsing(fn () => '••••••••••••••••')
-                    ->description('El token completo solo se muestra al crearlo'),
-                TextColumn::make('last_used_at')
-                    ->label('Último uso')
-                    ->dateTime()
-                    ->sortable()
-                    ->placeholder('Nunca usado'),
-                TextColumn::make('created_at')
-                    ->label('Creado')
-                    ->dateTime()
-                    ->sortable(),
-            ])
-            ->headerActions([
-                Action::make('create')
-                    ->label('Crear nuevo token')
-                    ->icon('heroicon-o-plus')
-                    ->form([
-                        TextInput::make('name')
-                            ->label('Nombre del token')
-                            ->required()
-                            ->maxLength(255)
-                            ->placeholder('Ej: Mi proyecto Laravel')
-                            ->helperText('Un nombre descriptivo para identificar este token'),
-                    ])
-                    ->action(function (array $data): void {
-                        $token = Auth::user()->createToken($data['name']);
+        return Auth::user()->tokens()->latest()->get();
+    }
 
-                        $this->newTokenValue = $token->plainTextToken;
+    public function createToken()
+    {
+        $this->validate([
+            'tokenName' => 'required|string|max:255',
+        ]);
 
-                        Notification::make()
-                            ->success()
-                            ->title('Token creado exitosamente')
-                            ->body('Copia el token ahora, no podrás verlo de nuevo.')
-                            ->persistent()
-                            ->send();
-                    })
-                    ->successNotification(null),
-            ])
-            ->actions([
-                DeleteAction::make()
-                    ->label('Eliminar')
-                    ->requiresConfirmation()
-                    ->modalHeading('Eliminar token')
-                    ->modalDescription('¿Estás seguro? Las aplicaciones que usen este token dejarán de funcionar.')
-                    ->successNotification(
-                        Notification::make()
-                            ->success()
-                            ->title('Token eliminado')
-                            ->body('El token ha sido revocado exitosamente.')
-                    ),
-            ])
-            ->emptyStateHeading('Sin tokens')
-            ->emptyStateDescription('Crea tu primer token de API para comenzar a enviar correos desde tus aplicaciones.')
-            ->emptyStateIcon('heroicon-o-key')
-            ->emptyStateActions([
-                Action::make('create')
-                    ->label('Crear token')
-                    ->icon('heroicon-o-plus')
-                    ->form([
-                        TextInput::make('name')
-                            ->label('Nombre del token')
-                            ->required()
-                            ->maxLength(255)
-                            ->placeholder('Ej: Mi proyecto Laravel'),
-                    ])
-                    ->action(function (array $data): void {
-                        $token = Auth::user()->createToken($data['name']);
+        $token = Auth::user()->createToken($this->tokenName);
 
-                        $this->newTokenValue = $token->plainTextToken;
+        $this->newTokenValue = $token->plainTextToken;
+        $this->tokenName = null;
 
-                        Notification::make()
-                            ->success()
-                            ->title('Token creado exitosamente')
-                            ->body('Copia el token ahora, no podrás verlo de nuevo.')
-                            ->persistent()
-                            ->send();
-                    }),
-            ]);
+        Notification::make()
+            ->success()
+            ->title('Token creado exitosamente')
+            ->body('Copia el token ahora, no podrás verlo de nuevo.')
+            ->persistent()
+            ->send();
+    }
+
+    public function deleteToken($tokenId)
+    {
+        Auth::user()->tokens()->where('id', $tokenId)->delete();
+
+        Notification::make()
+            ->success()
+            ->title('Token eliminado')
+            ->body('El token ha sido revocado exitosamente.')
+            ->send();
     }
 
     public function clearNewToken(): void
