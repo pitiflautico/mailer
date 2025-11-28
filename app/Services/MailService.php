@@ -145,30 +145,55 @@ class MailService
             $isHtml = $data['is_html'] ?? $this->isHtmlContent($body);
 
             // Send email with compliance headers
-            $sendMethod = $isHtml ? 'html' : 'raw';
-            Mail::$sendMethod($body, function ($message) use ($data, $unsubscribeUrl, $unsubscribeOneClick, $to) {
-                $message->from($data['from'])
-                    ->to($to)
-                    ->subject($data['subject'] ?? 'No Subject');
+            if ($isHtml) {
+                Mail::html($body, function ($message) use ($data, $unsubscribeUrl, $unsubscribeOneClick, $to) {
+                    $message->from($data['from'])
+                        ->to($to)
+                        ->subject($data['subject'] ?? 'No Subject');
 
-                // Add headers
-                $headers = $message->getHeaders();
-                $headers->addTextHeader('List-Unsubscribe', "<{$unsubscribeUrl}>, <{$unsubscribeOneClick}>")
-                    ->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click')
-                    ->addTextHeader('Precedence', 'bulk');
+                    // Add headers
+                    $headers = $message->getHeaders();
+                    $headers->addTextHeader('List-Unsubscribe', "<{$unsubscribeUrl}>, <{$unsubscribeOneClick}>")
+                        ->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click')
+                        ->addTextHeader('Precedence', 'bulk');
 
-                if (isset($data['cc'])) {
-                    $message->cc($data['cc']);
-                }
+                    if (isset($data['cc'])) {
+                        $message->cc($data['cc']);
+                    }
 
-                if (isset($data['bcc'])) {
-                    $message->bcc($data['bcc']);
-                }
+                    if (isset($data['bcc'])) {
+                        $message->bcc($data['bcc']);
+                    }
 
-                if (isset($data['reply_to'])) {
-                    $message->replyTo($data['reply_to']);
-                }
-            });
+                    if (isset($data['reply_to'])) {
+                        $message->replyTo($data['reply_to']);
+                    }
+                });
+            } else {
+                Mail::raw($body, function ($message) use ($data, $unsubscribeUrl, $unsubscribeOneClick, $to) {
+                    $message->from($data['from'])
+                        ->to($to)
+                        ->subject($data['subject'] ?? 'No Subject');
+
+                    // Add headers
+                    $headers = $message->getHeaders();
+                    $headers->addTextHeader('List-Unsubscribe', "<{$unsubscribeUrl}>, <{$unsubscribeOneClick}>")
+                        ->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click')
+                        ->addTextHeader('Precedence', 'bulk');
+
+                    if (isset($data['cc'])) {
+                        $message->cc($data['cc']);
+                    }
+
+                    if (isset($data['bcc'])) {
+                        $message->bcc($data['bcc']);
+                    }
+
+                    if (isset($data['reply_to'])) {
+                        $message->replyTo($data['reply_to']);
+                    }
+                });
+            }
 
             // Update send log
             $sendLog->update([
