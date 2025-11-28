@@ -13,6 +13,7 @@ class MailboxObserver
     public function created(Mailbox $mailbox): void
     {
         $this->createMailDirectory($mailbox);
+        $this->startWarmup($mailbox);
     }
 
     /**
@@ -81,6 +82,26 @@ class MailboxObserver
 
         } catch (\Exception $e) {
             Log::error("Failed to create mail directory for {$mailbox->email}: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Start automated warmup for a new mailbox.
+     */
+    protected function startWarmup(Mailbox $mailbox): void
+    {
+        try {
+            // Only start warmup if enabled in config and mailbox can send
+            if (!config('mailcore.features.auto_warmup', true) || !$mailbox->can_send) {
+                return;
+            }
+
+            $warmupService = app(\App\Services\WarmupService::class);
+            $warmupService->startWarmup($mailbox, 30);
+
+            Log::info("Warmup started automatically for: {$mailbox->email}");
+        } catch (\Exception $e) {
+            Log::error("Failed to start warmup for {$mailbox->email}: " . $e->getMessage());
         }
     }
 }

@@ -91,6 +91,22 @@ class Mailbox extends Model
     }
 
     /**
+     * Get the active warmup schedule for this mailbox.
+     */
+    public function warmupSchedule()
+    {
+        return $this->hasOne(WarmupSchedule::class)->where('status', 'active');
+    }
+
+    /**
+     * Get all warmup schedules for this mailbox.
+     */
+    public function warmupSchedules()
+    {
+        return $this->hasMany(WarmupSchedule::class);
+    }
+
+    /**
      * Check if mailbox can send emails.
      */
     public function canSendEmail(): bool
