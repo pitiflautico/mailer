@@ -5,11 +5,14 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\MailboxResource\Pages;
 use App\Models\Mailbox;
 use App\Models\Domain;
+use App\Models\WarmupSchedule;
+use App\Services\WarmupService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Notifications\Notification;
 use Illuminate\Support\Str;
 
 class MailboxResource extends Resource
@@ -163,6 +166,33 @@ class MailboxResource extends Resource
                     ->boolean()
                     ->toggleable(),
 
+                Tables\Columns\TextColumn::make('warmup_status')
+                    ->label('Warmup')
+                    ->state(function (Mailbox $record): string {
+                        $schedule = $record->warmupSchedules()->latest()->first();
+                        if (!$schedule) {
+                            return 'Sin warmup';
+                        }
+                        if ($schedule->status === 'active') {
+                            return "Día {$schedule->day}/{$schedule->target_day} ({$schedule->emails_sent_today}/{$schedule->emails_target_today})";
+                        }
+                        if ($schedule->status === 'completed') {
+                            return '✓ Completado';
+                        }
+                        return ucfirst($schedule->status);
+                    })
+                    ->badge()
+                    ->color(function (Mailbox $record): string {
+                        $schedule = $record->warmupSchedules()->latest()->first();
+                        if (!$schedule) return 'gray';
+                        return match ($schedule->status) {
+                            'active' => 'warning',
+                            'completed' => 'success',
+                            'paused' => 'danger',
+                            default => 'gray',
+                        };
+                    }),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Creado')
                     ->dateTime('d/m/Y')
@@ -197,6 +227,64 @@ class MailboxResource extends Resource
                             'password' => $data['new_password']
                         ]);
                     }),
+
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('start_warmup')
+                        ->label('Iniciar Warmup')
+                        ->icon('heroicon-o-fire')
+                        ->color('warning')
+                        ->visible(fn (Mailbox $record) => !$record->warmupSchedules()->whereIn('status', ['active'])->exists())
+                        ->form([
+                            Forms\Components\TextInput::make('days')
+                                ->label('Duración (días)')
+                                ->numeric()
+                                ->default(30)
+                                ->minValue(7)
+                                ->maxValue(90)
+                                ->required(),
+                        ])
+                        ->action(function (Mailbox $record, array $data) {
+                            app(WarmupService::class)->startWarmup($record, $data['days']);
+                            Notification::make()
+                                ->title('Warmup iniciado')
+                                ->body("Se ha iniciado el warmup de {$data['days']} días para {$record->email}")
+                                ->success()
+                                ->send();
+                        }),
+
+                    Tables\Actions\Action::make('pause_warmup')
+                        ->label('Pausar Warmup')
+                        ->icon('heroicon-o-pause')
+                        ->color('danger')
+                        ->visible(fn (Mailbox $record) => $record->warmupSchedules()->where('status', 'active')->exists())
+                        ->requiresConfirmation()
+                        ->action(function (Mailbox $record) {
+                            $record->warmupSchedules()->where('status', 'active')->update(['status' => 'paused']);
+                            Notification::make()
+                                ->title('Warmup pausado')
+                                ->body("Se ha pausado el warmup para {$record->email}")
+                                ->warning()
+                                ->send();
+                        }),
+
+                    Tables\Actions\Action::make('resume_warmup')
+                        ->label('Reanudar Warmup')
+                        ->icon('heroicon-o-play')
+                        ->color('success')
+                        ->visible(fn (Mailbox $record) => $record->warmupSchedules()->where('status', 'paused')->exists())
+                        ->requiresConfirmation()
+                        ->action(function (Mailbox $record) {
+                            $record->warmupSchedules()->where('status', 'paused')->update(['status' => 'active']);
+                            Notification::make()
+                                ->title('Warmup reanudado')
+                                ->body("Se ha reanudado el warmup para {$record->email}")
+                                ->success()
+                                ->send();
+                        }),
+                ])
+                    ->label('Warmup')
+                    ->icon('heroicon-o-fire')
+                    ->color('warning'),
 
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
