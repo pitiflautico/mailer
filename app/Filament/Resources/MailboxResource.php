@@ -75,6 +75,41 @@ class MailboxResource extends Resource
                     ])
                     ->columns(2),
 
+                Forms\Components\Section::make('Configuración SMTP para Transaccional')
+                    ->schema([
+                        Forms\Components\Placeholder::make('smtp_server')
+                            ->label('Servidor SMTP')
+                            ->content(fn () => config('mailcore.hostname', 'mail.tudominio.com'))
+                            ->helperText('Host para configurar en tu aplicación'),
+
+                        Forms\Components\Placeholder::make('smtp_ports')
+                            ->label('Puertos disponibles')
+                            ->content('587 (STARTTLS) | 465 (SSL/TLS) | 25 (sin cifrado)')
+                            ->helperText('Recomendado: Puerto 587 con STARTTLS'),
+
+                        Forms\Components\Placeholder::make('smtp_user')
+                            ->label('Usuario SMTP')
+                            ->content(fn ($record) => $record?->email ?? '-')
+                            ->helperText('Usa el email completo como usuario'),
+
+                        Forms\Components\Placeholder::make('smtp_password_info')
+                            ->label('Contraseña SMTP')
+                            ->content('Usa la contraseña que configuraste para este buzón')
+                            ->helperText('Si la olvidaste, cámbiala con el botón "Cambiar Contraseña"'),
+
+                        Forms\Components\Placeholder::make('smtp_encryption')
+                            ->label('Cifrado')
+                            ->content('TLS (recomendado) o SSL')
+                            ->helperText('MAIL_ENCRYPTION=tls en Laravel'),
+
+                        Forms\Components\View::make('filament.components.smtp-config-code')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2)
+                    ->collapsed()
+                    ->visible(fn ($record) => $record !== null)
+                    ->description('Usa estos datos para configurar el envío de emails transaccionales desde tu aplicación'),
+
                 Forms\Components\Section::make('Configuración')
                     ->schema([
                         Forms\Components\TextInput::make('quota_mb')
