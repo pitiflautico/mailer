@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Hash;
 
 class Mailbox extends Model
 {
@@ -61,17 +61,33 @@ class Mailbox extends Model
     }
 
     /**
-     * Boot the model.
+     * Hash the mailbox password whenever it is set.
+     *
+     * Mail services (Postfix/Dovecot) authenticate against this hash using the
+     * ARGON2ID scheme, so we hash with argon2id here. Centralising the hashing
+     * in a mutator guarantees every write path (create, edit form, the "reset
+     * password" action, the console command and seeders) stores a valid hash
+     * and never leaks a plaintext value into the database.
+     *
+     * Values that are already hashed pass through untouched so the same
+     * password is never double-hashed.
      */
-    protected static function boot()
+    protected function password(): Attribute
     {
-        parent::boot();
+        return Attribute::make(
+            set: function (?string $value): ?string {
+                if ($value === null || $value === '') {
+                    return $value;
+                }
 
-        static::creating(function ($mailbox) {
-            if ($mailbox->password) {
-                $mailbox->password = Hash::make($mailbox->password);
-            }
-        });
+                // Already a PHC/crypt hash (argon2id, bcrypt, ...) -> keep as is.
+                if (password_get_info($value)['algo'] !== null) {
+                    return $value;
+                }
+
+                return password_hash($value, PASSWORD_ARGON2ID);
+            },
+        );
     }
 
     /**

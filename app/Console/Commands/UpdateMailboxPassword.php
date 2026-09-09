@@ -36,7 +36,8 @@ class UpdateMailboxPassword extends Command
             return Command::FAILURE;
         }
 
-        $mailbox->password = bcrypt($password);
+        // The Mailbox model hashes the password (argon2id) via its mutator.
+        $mailbox->password = $password;
         $mailbox->save();
 
         $this->info("Password updated successfully for: {$email}");

@@ -259,8 +259,14 @@ class MailboxResource extends Resource
                     ])
                     ->action(function (Mailbox $record, array $data) {
                         $record->update([
-                            'password' => $data['new_password']
+                            'password' => $data['new_password'],
                         ]);
+
+                        Notification::make()
+                            ->title('Contraseña actualizada')
+                            ->body("Se ha cambiado la contraseña de {$record->email}")
+                            ->success()
+                            ->send();
                     }),
 
                 Tables\Actions\ActionGroup::make([

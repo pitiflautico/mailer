@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Domain;
 use App\Models\Mailbox;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class MailboxSeeder extends Seeder
 {
@@ -26,7 +25,7 @@ class MailboxSeeder extends Seeder
             'domain_id' => $domain->id,
             'local_part' => 'noreply',
             'email' => 'noreply@ejemplo.com',
-            'password' => Hash::make('password123'),
+            'password' => 'password123',
             'quota_mb' => 1024,
             'used_mb' => 150,
             'is_active' => true,
@@ -43,7 +42,7 @@ class MailboxSeeder extends Seeder
             'domain_id' => $domain->id,
             'local_part' => 'info',
             'email' => 'info@ejemplo.com',
-            'password' => Hash::make('password123'),
+            'password' => 'password123',
             'quota_mb' => 2048,
             'used_mb' => 500,
             'is_active' => true,
