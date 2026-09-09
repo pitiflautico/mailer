@@ -63,14 +63,18 @@ class Mailbox extends Model
     /**
      * Hash the mailbox password whenever it is set.
      *
-     * Mail services (Postfix/Dovecot) authenticate against this hash using the
-     * ARGON2ID scheme, so we hash with argon2id here. Centralising the hashing
-     * in a mutator guarantees every write path (create, edit form, the "reset
-     * password" action, the console command and seeders) stores a valid hash
-     * and never leaks a plaintext value into the database.
+     * Mail services (Postfix/Dovecot) authenticate against this hash. We store
+     * it with an explicit "{ARGON2ID}" scheme prefix so Dovecot always uses the
+     * argon2id verifier regardless of its configured default_pass_scheme (which
+     * on the mail server is ARGON2I, not ARGON2ID). Without the prefix a bare
+     * argon2id hash is verified as argon2i and authentication fails.
      *
-     * Values that are already hashed pass through untouched so the same
-     * password is never double-hashed.
+     * Centralising the hashing in a mutator guarantees every write path (create,
+     * edit form, the "reset password" action, the console command and seeders)
+     * stores a valid, correctly-tagged hash and never leaks a plaintext value.
+     *
+     * Values that are already hashed or already carry a "{SCHEME}" prefix pass
+     * through untouched so the same password is never double-hashed.
      */
     protected function password(): Attribute
     {
@@ -80,12 +84,12 @@ class Mailbox extends Model
                     return $value;
                 }
 
-                // Already a PHC/crypt hash (argon2id, bcrypt, ...) -> keep as is.
-                if (password_get_info($value)['algo'] !== null) {
+                // Already prefixed ("{ARGON2ID}...") or a bare crypt hash -> keep.
+                if (str_starts_with($value, '{') || password_get_info($value)['algo'] !== null) {
                     return $value;
                 }
 
-                return password_hash($value, PASSWORD_ARGON2ID);
+                return '{ARGON2ID}'.password_hash($value, PASSWORD_ARGON2ID);
             },
         );
     }
