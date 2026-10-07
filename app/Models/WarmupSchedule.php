@@ -69,10 +69,10 @@ class WarmupSchedule extends Model
         $this->last_send_at = now();
         $this->save();
 
-        // Check if we've hit today's target
-        if ($this->emails_sent_today >= $this->emails_target_today) {
-            $this->advanceDay();
-        }
+        // NOTE: day advancement is NOT done here. Reaching today's target must
+        // only stop sending for the day (see canSendToday), never fast-forward
+        // the warmup. advanceDay() is called once per CALENDAR day by the
+        // scheduler, so the ramp (5 -> 10 -> 20 -> 50 -> 100) tracks real days.
     }
 
     /**
