@@ -322,6 +322,26 @@ class MailboxResource extends Resource
                                 ->success()
                                 ->send();
                         }),
+
+                    Tables\Actions\Action::make('mark_warm')
+                        ->label('Marcar como caliente')
+                        ->icon('heroicon-o-check-badge')
+                        ->color('success')
+                        // Visible mientras haya un warmup en curso (activo o pausado).
+                        ->visible(fn (Mailbox $record) => $record->warmupSchedules()->whereIn('status', ['active', 'paused'])->exists())
+                        ->requiresConfirmation()
+                        ->modalHeading('Marcar buzón como caliente')
+                        ->modalDescription('El buzón se dará por calentado y dejará de enviar correos de warmup de inmediato. Podrás reiniciar el warmup más adelante si lo necesitas.')
+                        ->action(function (Mailbox $record) {
+                            $record->warmupSchedules()
+                                ->whereIn('status', ['active', 'paused'])
+                                ->update(['status' => 'completed', 'completed_at' => now()]);
+                            Notification::make()
+                                ->title('Buzón marcado como caliente')
+                                ->body("{$record->email} ya no enviará correos de warmup.")
+                                ->success()
+                                ->send();
+                        }),
                 ])
                     ->label('Warmup')
                     ->icon('heroicon-o-fire')
