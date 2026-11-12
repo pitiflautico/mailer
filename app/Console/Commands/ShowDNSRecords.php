@@ -116,7 +116,7 @@ class ShowDNSRecords extends Command
         $this->line("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         $this->line("Type:  TXT");
         $this->line("Name:  _dmarc.{$domain->name}");
-        $this->line("Value: v=DMARC1; p=quarantine; rua=mailto:postmaster@{$domain->name}; ruf=mailto:postmaster@{$domain->name}; fo=1");
+        $this->line("Value: {$domain->dmarcRecordValue()}");
         $this->line("TTL:   3600");
 
         $this->newLine();

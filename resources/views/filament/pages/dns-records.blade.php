@@ -222,7 +222,7 @@
             <div>
                 <span class="font-medium text-gray-700 dark:text-gray-300">Value:</span>
                 <div class="mt-1">
-                    <code class="block px-3 py-2 bg-white dark:bg-gray-900 rounded text-xs break-all">v=DMARC1; p=quarantine; rua=mailto:postmaster@{{ $domain->name }}; ruf=mailto:postmaster@{{ $domain->name }}; fo=1</code>
+                    <code class="block px-3 py-2 bg-white dark:bg-gray-900 rounded text-xs break-all">{{ $domain->dmarcRecordValue() }}</code>
                 </div>
             </div>
         </div>

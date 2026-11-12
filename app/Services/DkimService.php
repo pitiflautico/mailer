@@ -261,7 +261,7 @@ class DkimService
             'dmarc' => [
                 'type' => 'TXT',
                 'name' => '_dmarc',
-                'value' => "v=DMARC1; p=none; rua=mailto:dmarc@{$domain->name}",
+                'value' => $domain->dmarcRecordValue(),
             ],
         ];
     }

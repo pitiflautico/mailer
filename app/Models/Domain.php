@@ -66,6 +66,15 @@ class Domain extends Model
     }
 
     /**
+     * Recommended DMARC TXT value (single source of truth for UI, CLI and service).
+     * p=none: monitor-only until reports show SPF/DKIM aligned for all senders.
+     */
+    public function dmarcRecordValue(): string
+    {
+        return "v=DMARC1; p=none; rua=mailto:postmaster@{$this->name}";
+    }
+
+    /**
      * Check if domain is fully verified.
      */
     public function isFullyVerified(): bool

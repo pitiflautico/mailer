@@ -103,7 +103,7 @@ class VerifyDomainDNS extends Command
             $this->line("   Record: {$dmarcResult['record']}");
         } else {
             $this->error("   ✗ DMARC: NOT FOUND");
-            $this->warn("   Expected: v=DMARC1; p=quarantine; rua=mailto:postmaster@{$domain->name}");
+            $this->warn("   Expected: {$domain->dmarcRecordValue()}");
         }
 
         // Update last verification time
